@@ -1,0 +1,105 @@
+# This workflow will build a package using Maven and then publish it to GitHub packages when a release is created
+# For more information see: https://github.com/actions/setup-java#apache-maven-with-a-settings-path
+
+name: Maven Build
+
+on:
+  tags:
+    - '[0-9].[0-9].*' 
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up JDK 11
+      uses: actions/setup-java@v1
+      with:
+        java-version: 11
+        server-id: ossrh
+        server-username: MAVEN_USERNAME
+        server-password: MAVEN_PASSWORD
+
+    - name: Set up Python 3
+      uses: actions/setup-python@v1
+      with:
+        python-version: '3.7'
+
+    - name: Install dependencies
+      run: python -m pip install --upgrade pip setuptools wheel
+
+    - name: Publish package
+      run: mvn -B package --file pom.xml
+      env:
+        MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+        MAVEN_PASSWORD: ${{ secrets.OSSRH_TOKEN }}
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # This token is provided by Actions, you do not need to create your own token
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Harvest ${{ github.ref }}
+        draft: false
+        prerelease: false
+
+     - name: Upload Release Asset
+        id: upload-release-asset zip
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: target/harvest-${{ github.ref }}-bin.zip
+          asset_name: harvest-${{ github.ref }}-bin.zip
+          asset_content_type: application/zip
+
+     - name: Upload Release Asset tar.gz
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: target/harvest-${{ github.ref }}-bin.tar.gz
+          asset_name: harvest-${{ github.ref }}-bin.tar.gz
+          asset_content_type: application/tar+gzip
+
+     - name: Upload Release Asset jar
+        id: upload-release-asset 
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: target/harvest-${{ github.ref }}.jar
+          asset_name: harvest-${{ github.ref }}.jar
+          asset_content_type: application/java-archive
+
+    - uses: actions/checkout@v2
+      with:
+        ref: gh-pages
+    - name: Create changelog & requirements
+      run: |
+        sudo gem install github_changelog_generator
+        echo ::set-env name=REQUIREMENT_FILE::$(requirement-report --organization NASA-PDS --repository harvest  --output pdsen-corral --token ${{ secrets.GITHUB_TOKEN }} --dev)
+        github_changelog_generator --user NASA-PDS --project harvest  --output pdsen-corral/CHANGELOG.md --token ${{ secrets.GITHUB_TOKEN }} --configure-sections '{"improvements":{"prefix":"**Improvements:**","labels":["enhancement"]},"defects":{"prefix":"**Defects:**","labels":["bug"]},"deprecations":{"prefix":"**Deprecations:**","labels":["deprecation"]}}' --no-pull-requests
+    - name: Commit CHANGELOG.md and requirement files
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        echo "commit pdsen-corral/CHANGELOG.md and ${{ env.REQUIREMENT_FILE }}on gh-pages branch"
+        git add pdsen-corral/CHANGELOG.md ${{ env.REQUIREMENT_FILE }}
+        git commit -m "update changelog and requirements" --allow-empty
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: gh-pages
+    - name: Ping pdsen-corral
+      run: git-ping --repo nasa-pds/pdsen-corral --token ${{ secrets.ADMIN_GITHUB_TOKEN }} --branch master --message 'harvest has been updated'
+         
