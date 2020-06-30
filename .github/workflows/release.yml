@@ -48,6 +48,10 @@ jobs:
         draft: false
         prerelease: false
 
+    - name: Get the version
+      id: get_version
+      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+
     - name: Upload Release Asset zip
       id: upload-release-asset-zip
       uses: actions/upload-release-asset@v1
@@ -55,8 +59,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: target/harvest-${GITHUB_REF##*/}-bin.zip
-        asset_name: harvest-${GITHUB_REF##*/}-bin.zip
+        asset_path: target/harvest-${{ steps.get_version.outputs.VERSION }}-bin.zip
+        asset_name: harvest-${{ steps.get_version.outputs.VERSION }}-bin.zip
         asset_content_type: application/zip
 
     - name: Upload Release Asset tar.gz
@@ -66,8 +70,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: target/harvest-${GITHUB_REF##*/}-bin.tar.gz
-        asset_name: harvest-${GITHUB_REF##*/}-bin.tar.gz
+        asset_path: target/harvest-${{ steps.get_version.outputs.VERSION }}-bin.tar.gz
+        asset_name: harvest-${{ steps.get_version.outputs.VERSION }}-bin.tar.gz
         asset_content_type: application/tar+gzip
 
     - name: Upload Release Asset jar
@@ -77,8 +81,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: target/harvest-${GITHUB_REF##*/}.jar
-        asset_name: harvest-${GITHUB_REF##*/}.jar
+        asset_path: target/harvest-${{ steps.get_version.outputs.VERSION }}.jar
+        asset_name: harvest-${{ steps.get_version.outputs.VERSION }}.jar
         asset_content_type: application/java-archive
 
     - uses: actions/checkout@v2
