@@ -92,6 +92,7 @@ jobs:
     - name: Create changelog & requirements
       run: |
         sudo gem install github_changelog_generator
+        pip install pds-github-util
         echo ::set-env name=REQUIREMENT_FILE::$(requirement-report --organization tloubrieu-jpl  --repository harvest  --output pdsen-corral --token ${{ secrets.GITHUB_TOKEN }})
         github_changelog_generator --user tloubrieu-jpl --project harvest  --output pdsen-corral/CHANGELOG.md --token ${{ secrets.GITHUB_TOKEN }} --configure-sections '{"improvements":{"prefix":"**Improvements:**","labels":["enhancement"]},"defects":{"prefix":"**Defects:**","labels":["bug"]},"deprecations":{"prefix":"**Deprecations:**","labels":["deprecation"]}}' --no-pull-requests
 
@@ -110,6 +111,5 @@ jobs:
         branch: gh-pages
     - name: Ping pdsen-corral
       run: |
-        pip install pds-github-util
         git-ping --repo nasa-pds/pdsen-corral --token ${{ secrets.ADMIN_GITHUB_TOKEN }} --branch master --message 'test harvest has been upgrade to ${{ github.ref }}'
          
